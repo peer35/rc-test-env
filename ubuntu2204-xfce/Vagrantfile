@@ -1,0 +1,32 @@
+# Configuration variables.
+VAGRANTFILE_API_VERSION = "2"
+
+BOX = 'generic/ubuntu2204'
+GUI = true
+CPU = 2
+RAM = 4096
+
+DOMAIN  = ".rc.test"
+NETWORK = "192.168.56."
+NETMASK = "255.255.255.0"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  #config.gui = GUI
+  # Provision rctest for Ansible on Windows host.
+  if Vagrant::Util::Platform.windows? then
+    config.vm.define "rctest" do |rctest|
+      rctest.vm.provider :virtualbox do |vbox|
+        vbox.customize ["guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000]
+        vbox.gui = GUI
+      end
+      rctest.vm.box = BOX
+      rctest.vm.hostname = "rctest"
+      rctest.vm.network :private_network, ip: "192.168.56.5", netmask: NETMASK
+      rctest.vm.provision "shell", privileged: false, path: "../vagrant/provision_rctest.sh"
+      rctest.vm.provision "shell", privileged: false, path: "../vagrant/provision_ubuntu_xfce.sh"
+      rctest.vm.synced_folder ".", "/vagrant", disabled: true
+      rctest.vm.provision "shell",
+        inline: "sudo timedatectl set-timezone Europe/Amsterdam"
+    end
+  end
+end
